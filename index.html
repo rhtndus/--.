@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수능 합격 플래너 PRO</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg-color: #ffffff; --text-color: #37352f; --gray-light: #f1f1ef; --gray-text: #9b9a97;
+    --border-color: #e9e9e7; --accent-color: #eb5757; --sidebar-bg: #f9f9f8; --dday-bg: #fff5f5;
+    --modal-bg: #ffffff; --review-color: #f2994a; --star-filled: #ffca28;
+    --grass-0: #ebedf0; --grass-1: #9be9a8; --grass-2: #40c463; --grass-3: #30a14e; --grass-4: #216e39;
+    --quote-bg: #f7f6f3;
+  }
+  [data-theme="dark"] {
+    --bg-color: #191919; --text-color: #e0e0e0; --gray-light: #2d2d2d; --gray-text: #888888;
+    --border-color: #333333; --accent-color: #ff7373; --sidebar-bg: #222222; --dday-bg: #3d2b2b; --modal-bg: #2a2a2a;
+    --grass-0: #2d333b; --quote-bg: #252525;
+  }
+  body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; justify-content: center; transition: 0.3s; }
+  .container { width: 100%; max-width: 700px; padding: 40px 20px 80px; box-sizing: border-box; }
+
+  /* 사이드바 */
+  .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transition: 0.3s; z-index: 99; }
+  .overlay.active { opacity: 1; visibility: visible; }
+  .sidebar { position: fixed; top: 0; left: -320px; width: 300px; height: 100%; background-color: var(--sidebar-bg); z-index: 100; padding: 25px; transition: 0.3s; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+  .sidebar.active { left: 0; }
+  .sidebar-menu-btn { width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; background-color: var(--accent-color); }
+
+  /* 헤더 & 명언 */
+  .header-area { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+  .dday-badge { display: inline-block; padding: 6px 14px; background-color: var(--dday-bg); color: var(--accent-color); border-radius: 20px; font-weight: 800; font-size: 14px; margin-bottom: 20px; }
+  .motivation-quote-box { background-color: var(--quote-bg); border-left: 4px solid var(--accent-color); padding: 16px 20px; margin-bottom: 25px; font-size: 15px; border-radius: 2px 8px 8px 2px; font-style: italic; }
+
+  /* 리스트 그룹화 */
+  .category-group { margin-bottom: 25px; }
+  .category-header { display: inline-flex; align-items: center; background-color: #111; color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
+  [data-theme="dark"] .category-header { background-color: #333; }
+  .task-item { display: flex; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--gray-light); }
+  .task-text { flex: 1; display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .task-text.completed { color: var(--gray-text); text-decoration: line-through; }
+  .task-timer-display { font-family: monospace; font-weight: bold; min-width: 70px; text-align: right; margin-right: 10px; }
+
+  /* 모달 & 인강 탭 */
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 200; }
+  .modal-overlay.active { display: flex; }
+  .modal { background-color: var(--modal-bg); width: 95%; max-width: 550px; border-radius: 16px; padding: 25px; max-height: 85vh; overflow-y: auto; }
+  .lec-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+  .lec-tab { padding: 10px; cursor: pointer; color: var(--gray-text); font-weight: bold; }
+  .lec-tab.active { color: var(--accent-color); border-bottom: 2px solid var(--accent-color); }
+
+  .card-style { background-color: var(--gray-light); border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+  .score-input { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; background: var(--bg-color); color: var(--text-color); }
+
+  /* 기타 */
+  .total-time-card { background-color: var(--dday-bg); border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 25px; border: 2px solid var(--accent-color); }
+  .total-time-value { font-size: 42px; font-weight: 900; font-family: monospace; }
+  .subject-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; justify-content: center; }
+  .sub-btn { font-size: 12px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--gray-light); cursor: pointer; }
+  .input-group { display: flex; gap: 8px; margin-bottom: 30px; }
+  .input-group input, .input-group select { border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; background: var(--bg-color); color: var(--text-color); }
+  .add-btn { background-color: var(--accent-color); color: white; border: none; border-radius: 8px; padding: 0 20px; font-weight: bold; cursor: pointer; }
+  .grass-container { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+  .grass-square { aspect-ratio: 1; border-radius: 2px; background-color: var(--grass-0); }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="sidebar" id="sidebar">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <b style="font-size:18px;">📊 학습 대시보드</b>
+    <button class="close-btn" id="close-sidebar" style="background:none; border:none; font-size:24px; cursor:pointer;">✕</button>
+  </div>
+  <div class="card-style">
+    <div style="font-size:12px; font-weight:bold; margin-bottom:5px; color:var(--gray-text);">🌿 최근 4주 공부 잔디</div>
+    <div class="grass-container" id="grass-grid"></div>
+  </div>
+  <div class="card-style">
+    <canvas id="weeklyChart" height="140"></canvas>
+  </div>
+  <button class="sidebar-menu-btn" id="open-lecture-modal">📺 인강 진도표 관리</button>
+  <button class="sidebar-menu-btn" id="open-exam-modal" style="background-color: #4a90e2;">📈 모의고사 성적 관리</button>
+  <button class="sidebar-menu-btn" id="backup-btn" style="background-color: #27ae60;">💾 데이터 백업(다운로드)</button>
+  <button class="sidebar-menu-btn" id="restore-btn" style="background-color: #f39c12;">📂 데이터 불러오기</button>
+  <input type="file" id="restore-file" style="display:none;" accept=".json">
+</div>
+
+<div class="modal-overlay" id="lecture-modal-overlay">
+  <div class="modal">
+    <button class="close-btn" style="float:right; background:none; border:none; font-size:24px; cursor:pointer;" onclick="closeModal('lecture-modal-overlay')">✕</button>
+    <h3>📺 인강 진도표</h3>
+    
+    <div class="card-style">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+            <select id="lec-category" style="padding:8px; border-radius:5px;">
+                <option value="국어">국어</option>
+                <option value="수학">수학</option>
+                <option value="영어">영어</option>
+                <option value="사문">사문</option>
+                <option value="생윤">생윤</option>
+                <option value="기타">기타</option>
+            </select>
+            <input type="text" id="lec-name" placeholder="강의명" style="padding:8px;">
+        </div>
+        <div style="display:flex; gap:8px;">
+            <input type="number" id="lec-count" placeholder="총 강수" style="flex:1; padding:8px;">
+            <button id="add-lec-btn" style="padding:8px 20px; background:var(--accent-color); color:white; border:none; border-radius:5px; font-weight:bold;">추가</button>
+        </div>
+    </div>
+
+    <div class="lec-tabs">
+        <div class="lec-tab active" id="tab-ongoing" onclick="setLecTab('ongoing')">수강 중</div>
+        <div class="lec-tab" id="tab-completed" onclick="setLecTab('completed')">수강 완료 📦</div>
+    </div>
+    
+    <div id="lecture-list-container"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exam-modal-overlay">
+  <div class="modal">
+    <button class="close-btn" style="float:right; background:none; border:none; font-size:24px; cursor:pointer;" onclick="closeModal('exam-modal-overlay')">✕</button>
+    <h3>📈 모의고사 성적 관리</h3>
+    <div class="card-style"><canvas id="examChart" height="150"></canvas></div>
+    <div class="card-style">
+      <input type="text" id="ex-title" placeholder="시험명 (예: 6월 모평)" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
+      <table style="width:100%; font-size:13px; text-align:center;">
+        <tr><th>과목</th><th>표점</th><th>백분위/등급</th></tr>
+        <tr><td>국어</td><td><input type="number" id="ex-kor-s" class="score-input"></td><td><input type="number" id="ex-kor-p" class="score-input"></td></tr>
+        <tr><td>수학</td><td><input type="number" id="ex-math-s" class="score-input"></td><td><input type="number" id="ex-math-p" class="score-input"></td></tr>
+        <tr style="background:rgba(74,144,226,0.05)"><td><b>영어</b></td><td>-</td><td><input type="number" id="ex-eng-g" class="score-input" placeholder="등급"></td></tr>
+        <tr><td>사문</td><td><input type="number" id="ex-in1-s" class="score-input"></td><td><input type="number" id="ex-in1-p" class="score-input"></td></tr>
+        <tr><td>생윤</td><td><input type="number" id="ex-in2-s" class="score-input"></td><td><input type="number" id="ex-in2-p" class="score-input"></td></tr>
+      </table>
+      <button id="add-exam-btn" style="width:100%; padding:12px; margin-top:10px; background:#4a90e2; color:white; border:none; border-radius:8px; font-weight:bold;">성적 기록 저장</button>
+    </div>
+    <div id="exam-list-container"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="header-area">
+    <button id="open-sidebar" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">☰</button>
+    <h1 style="margin:0; font-size:26px;">오늘의 플랜</h1>
+    <button id="theme-toggle" style="background:none; border:none; font-size:22px; cursor:pointer; margin-left:auto;">🌙</button>
+  </div>
+
+  <div class="dday-badge" id="d-day">D-Day 계산 중...</div>
+  <div class="motivation-quote-box" id="m-quote">"오늘의 집중이 내일의 결과를 만듭니다."</div>
+
+  <div class="total-time-card">
+    <div style="font-size:14px; color:var(--accent-color); font-weight:bold; margin-bottom:8px;">🔥 총 순공 시간</div>
+    <div class="total-time-value" id="total-display">00:00:00</div>
+  </div>
+
+  <div class="subject-buttons">
+    <button class="sub-btn" onclick="addTag('국어')">국어</button>
+    <button class="sub-btn" onclick="addTag('수학')">수학</button>
+    <button class="sub-btn" onclick="addTag('영어')">영어</button>
+    <button class="sub-btn" onclick="addTag('사문')">사문</button>
+    <button class="sub-btn" onclick="addTag('생윤')">생윤</button>
+    <button class="sub-btn" style="border-color: #f2994a; color: #f2994a;" onclick="addTag('!복습')">!복습</button>
+  </div>
+
+  <div class="input-group">
+    <input type="text" id="task-input" placeholder="할 일을 입력하세요" autocomplete="off" style="flex:1;">
+    <button class="add-btn" id="add-task-btn">추가</button>
+  </div>
+
+  <div id="grouped-task-container"></div>
+</div>
+
+<script>
+  let appData = JSON.parse(localStorage.getItem('studyPlannerData')) || {};
+  let lectures = JSON.parse(localStorage.getItem('studyLectures')) || [];
+  let exams = JSON.parse(localStorage.getItem('studyExams')) || [];
+  const getToday = () => new Date().toISOString().split('T')[0];
+  let currentKey = getToday();
+  let timerIdx = -1, timerInterval = null, weeklyChart = null, examChart = null;
+  let currentLecTab = 'ongoing';
+  const categories = ['국어', '수학', '영어', '사문', '생윤', '기타'];
+
+  function format(s) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; }
+  const $ = id => document.getElementById(id);
+
+  function init() {
+    if(!appData[currentKey]) appData[currentKey] = { tasks: [] };
+    renderGroupedTasks(); updateTot(); updateDDay();
+  }
+
+  // 사이드바 & 모달
+  $('open-sidebar').onclick = () => { $('sidebar').classList.add('active'); $('overlay').classList.add('active'); drawGrass(); drawWeekly(); };
+  $('close-sidebar').onclick = $('overlay').onclick = () => { $('sidebar').classList.remove('active'); $('overlay').classList.remove('active'); };
+  $('open-lecture-modal').onclick = () => { $('lecture-modal-overlay').classList.add('active'); renderLectures(); };
+  $('open-exam-modal').onclick = () => { $('exam-modal-overlay').classList.add('active'); renderExams(); };
+  function closeModal(id) { $(id).classList.remove('active'); }
+
+  // 할 일 관리
+  function addTag(tag) {
+    const input = $('task-input');
+    if (tag === '!복습') { if (!input.value.includes('!복습')) input.value = '!복습 ' + input.value; }
+    else { input.value = tag + ' ' + input.value; }
+    input.focus();
+  }
+
+  $('add-task-btn').onclick = () => {
+    let v = $('task-input').value.trim(); if(!v) return;
+    const isReview = v.includes('!복습');
+    let cleanText = v.replace('!복습', '').trim();
+    categories.forEach(c => { cleanText = cleanText.replace(c, '').trim(); });
+    appData[currentKey].tasks.push({ fullText: v, text: cleanText || v, time: 0, completed: false, review: isReview });
+    $('task-input').value = ''; save(); renderGroupedTasks();
+  };
+
+  function renderGroupedTasks() {
+    const container = $('grouped-task-container'); container.innerHTML = '';
+    const tasks = appData[currentKey].tasks;
+    categories.forEach(cat => {
+      const catTasks = tasks.filter(t => cat === '기타' ? !categories.some(c => c !== '기타' && t.fullText.includes(c)) : t.fullText.includes(cat));
+      if (catTasks.length > 0) {
+        const groupDiv = document.createElement('div'); groupDiv.className = 'category-group';
+        groupDiv.innerHTML = `<div class="category-header">🏷️ ${cat}</div><ul style="list-style:none;padding:0;" class="task-list"></ul>`;
+        const list = groupDiv.querySelector('ul');
+        catTasks.forEach(t => {
+          const originalIdx = tasks.indexOf(t);
+          const li = document.createElement('li'); li.className = 'task-item';
+          const isRun = (timerIdx === originalIdx);
+          li.innerHTML = `<input type="checkbox" ${t.completed ? 'checked' : ''} style="margin-right:12px;"><span class="task-text ${t.completed ? 'completed' : ''}">${t.review ? '<span style="font-size:10px; background:#f2994a; color:white; padding:2px 5px; border-radius:4px; margin-right:4px;">복습</span>' : ''}${t.text}</span><span class="task-timer-display" id="t-${originalIdx}">${format(t.time || 0)}</span><button class="task-play-btn ${isRun ? 'running' : ''}" style="background:none;border:none;cursor:pointer;font-size:20px;">${isRun ? '⏸️' : '▶️'}</button><button class="del-btn" style="background:none;border:none;cursor:pointer;color:#ccc;margin-left:5px;">✕</button>`;
+          li.querySelector('input').onchange = (e) => { t.completed = e.target.checked; if(t.completed && timerIdx === originalIdx) stopTimer(); save(); renderGroupedTasks(); };
+          li.querySelector('.task-play-btn').onclick = () => { if(!t.completed) timerIdx === originalIdx ? stopTimer() : startTimer(originalIdx); };
+          li.querySelector('.del-btn').onclick = () => { if(timerIdx === originalIdx) stopTimer(); appData[currentKey].tasks.splice(originalIdx, 1); save(); renderGroupedTasks(); updateTot(); };
+          list.appendChild(li);
+        });
+        container.appendChild(groupDiv);
+      }
+    });
+  }
+
+  function startTimer(i) {
+    if(timerInterval) clearInterval(timerInterval);
+    timerIdx = i; renderGroupedTasks();
+    timerInterval = setInterval(() => {
+      appData[currentKey].tasks[timerIdx].time = (appData[currentKey].tasks[timerIdx].time || 0) + 1;
+      const display = $(`t-${timerIdx}`); if(display) display.textContent = format(appData[currentKey].tasks[timerIdx].time);
+      updateTot(); if(appData[currentKey].tasks[timerIdx].time % 10 === 0) save();
+    }, 1000);
+  }
+  function stopTimer() { clearInterval(timerInterval); timerInterval = null; timerIdx = -1; save(); renderGroupedTasks(); }
+  function updateTot() { const tot = appData[currentKey].tasks.reduce((a, t) => a + (t.time || 0), 0); $('total-display').textContent = format(tot); }
+  function save() { localStorage.setItem('studyPlannerData', JSON.stringify(appData)); localStorage.setItem('studyLectures', JSON.stringify(lectures)); localStorage.setItem('studyExams', JSON.stringify(exams)); }
+
+  // 인강 진도표 
+  function setLecTab(tab) {
+      currentLecTab = tab;
+      $('tab-ongoing').classList.toggle('active', tab === 'ongoing');
+      $('tab-completed').classList.toggle('active', tab === 'completed');
+      renderLectures();
+  }
+
+  function renderLectures() {
+    const cont = $('lecture-list-container'); cont.innerHTML = '';
+    const filteredLecs = lectures.filter(l => currentLecTab === 'ongoing' ? (l.done < l.total) : (l.done >= l.total));
+    categories.forEach(cat => {
+        const catLecs = filteredLecs.filter(l => l.category === cat);
+        if(catLecs.length > 0) {
+            const header = document.createElement('div');
+            header.style = "font-size:12px; font-weight:bold; color:var(--gray-text); margin: 15px 0 8px;";
+            header.innerText = `🏷️ ${cat}`;
+            cont.appendChild(header);
+            catLecs.forEach((l) => {
+                const originalIdx = lectures.indexOf(l);
+                const per = Math.round((l.done / l.total) * 100) || 0;
+                const div = document.createElement('div'); div.className = 'card-style';
+                div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><b>${l.name}</b><span>${l.done}/${l.total}강 (${per}%)</span></div>
+                    <div style="background:#ddd;height:8px;border-radius:4px;overflow:hidden;"><div style="background:var(--accent-color);width:${per}%;height:100%;"></div></div>
+                    <div style="margin-top:8px;"><button onclick="updateLec(${originalIdx}, 1)">+1강</button><button onclick="updateLec(${originalIdx}, -1)">-1강</button><button style="float:right;color:red;border:none;background:none;cursor:pointer;" onclick="delLec(${originalIdx})">삭제</button></div>`;
+                cont.appendChild(div);
+            });
+        }
+    });
+    if(filteredLecs.length === 0) { cont.innerHTML = `<div style="text-align:center; padding:40px; color:var(--gray-text);">${currentLecTab === 'ongoing' ? '현재 수강 중인 강의가 없습니다.' : '아직 완료된 강의가 없습니다.'}</div>`; }
+  }
+
+  $('add-lec-btn').onclick = () => {
+    const cat = $('lec-category').value, name = $('lec-name').value, total = parseInt($('lec-count').value);
+    if(name && total) { lectures.push({category: cat, name, total, done:0}); $('lec-name').value=''; $('lec-count').value=''; save(); renderLectures(); }
+  };
+  window.updateLec = (i, v) => { lectures[i].done = Math.max(0, Math.min(lectures[i].total, lectures[i].done + v)); save(); renderLectures(); };
+  window.delLec = (i) => { if(confirm('정말 삭제할까요?')) { lectures.splice(i, 1); save(); renderLectures(); } };
+
+  // 성적 관리 (영어 등급 추가)
+  function renderExams() {
+    const cont = $('exam-list-container'); cont.innerHTML = '';
+    exams.forEach((ex, i) => {
+      const div = document.createElement('div'); div.className = 'card-style';
+      const avgP = ((ex.korP+ex.mathP+ex.in1P+ex.in2P)/4).toFixed(1);
+      div.innerHTML = `<div style="display:flex;justify-content:space-between;"><b>${ex.title}</b> <button style="color:red;border:none;background:none;cursor:pointer;" onclick="delExam(${i})">삭제</button></div>
+      <div style="font-size:12px; margin-top:5px; color:var(--gray-text);">주요과목 평균백분위: <span style="color:var(--text-color); font-weight:bold;">${avgP}</span> | 영어: <span style="color:var(--accent-color); font-weight:bold;">${ex.engG || '-'}등급</span></div>`;
+      cont.appendChild(div);
+    });
+    drawExamChart();
+  }
+  $('add-exam-btn').onclick = () => {
+    const ex = { 
+        title: $('ex-title').value || getToday(), 
+        korP: parseInt($('ex-kor-p').value)||0, 
+        mathP: parseInt($('ex-math-p').value)||0, 
+        engG: parseInt($('ex-eng-g').value)||0,
+        in1P: parseInt($('ex-in1-p').value)||0, 
+        in2P: parseInt($('ex-in2-p').value)||0 
+    };
+    exams.push(ex); save(); renderExams();
+    ['ex-title','ex-kor-s','ex-kor-p','ex-math-s','ex-math-p','ex-eng-g','ex-in1-s','ex-in1-p','ex-in2-s','ex-in2-p'].forEach(id => $(id).value = '');
+  };
+  window.delExam = (i) => { if(confirm('삭제할까요?')) { exams.splice(i, 1); save(); renderExams(); } };
+  function drawExamChart() {
+    const ctx = $('examChart').getContext('2d');
+    const data = exams.map(ex => (ex.korP+ex.mathP+ex.in1P+ex.in2P)/4);
+    if(examChart) examChart.destroy();
+    examChart = new Chart(ctx, { type:'line', data:{ labels: exams.map(e=>e.title), datasets:[{label:'평균백분위', data, borderColor:'#4a90e2', tension:0.2, fill:false}] }, options:{scales:{y:{min:0, max:100}}, plugins:{legend:{display:false}}} });
+  }
+
+  // 데이터 백업/복구
+  $('backup-btn').onclick = () => {
+    const dataStr = JSON.stringify({appData, lectures, exams});
+    const blob = new Blob([dataStr], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `planner_backup_${getToday()}.json`; a.click();
+  };
+  $('restore-btn').onclick = () => $('restore-file').click();
+  $('restore-file').onchange = (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (re) => {
+      const data = JSON.parse(re.target.result);
+      appData = data.appData; lectures = data.lectures; exams = data.exams;
+      save(); location.reload();
+    };
+    reader.readAsText(file);
+  };
+
+  function drawGrass() {
+    const grid = $('grass-grid'); grid.innerHTML = '';
+    for(let i=27; i>=0; i--) {
+      const d = new Date(); d.setDate(d.getDate()-i); const k = d.toISOString().split('T')[0];
+      const sec = appData[k] ? appData[k].tasks.reduce((a,t)=>a+(t.time||0),0) : 0;
+      const hours = sec/3600; let level = hours > 9 ? 4 : hours > 6 ? 3 : hours > 3 ? 2 : hours > 0 ? 1 : 0;
+      const div = document.createElement('div'); div.className = 'grass-square'; div.style.backgroundColor = `var(--grass-${level})`;
+      grid.appendChild(div);
+    }
+  }
+  function drawWeekly() {
+    const ctx = $('weeklyChart').getContext('2d'); const labels = [], data = [];
+    for(let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate()-i); const k = d.toISOString().split('T')[0]; labels.push(k.slice(5)); const sec = appData[k] ? appData[k].tasks.reduce((a,t)=>a+(t.time||0),0) : 0; data.push((sec/3600).toFixed(1)); }
+    if(weeklyChart) weeklyChart.destroy();
+    weeklyChart = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{data, backgroundColor:'#eb5757', borderRadius:4}] }, options:{ plugins:{legend:{display:false}} } });
+  }
+
+  $('theme-toggle').onclick = () => {
+    document.body.toggleAttribute('data-theme');
+    $('theme-toggle').textContent = document.body.hasAttribute('data-theme') ? '☀️' : '🌙';
+  };
+  function updateDDay() {
+    const diff = new Date(2026, 10, 19) - new Date().setHours(0,0,0,0);
+    $('d-day').innerHTML = `🔥 <b>2027 수능 D-${Math.ceil(diff/(1000*60*60*24))}</b>`;
+  }
+
+  init();
+</script>
+</body>
+</html>
