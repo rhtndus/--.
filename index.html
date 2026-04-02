@@ -244,7 +244,7 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="npass-modal-overlay"><div class="modal"><button class="close-btn" style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);" onclick="closeModal('npass-modal-overlay')">✕</button><h3>📚 N제 / 기출 회독 트래커</h3><div class="card-style"><div style="display:flex; gap:8px;"><input type="text" id="book-name" placeholder="문제집명 (예: 마더텅 국어)" style="flex:2; padding:8px; border-radius:5px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"><input type="number" id="book-total" placeholder="총 단원" style="flex:1; padding:8px; border-radius:5px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"><button id="add-book-btn" style="padding:8px 15px; background:var(--pass-color); color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">등록</button></div></div><div id="book-list-container"></div></div></div>
+<div class="modal-overlay" id="npass-modal-overlay"><div class="modal"><button class="close-btn" style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);">✕</button><h3>📚 N제 / 기출 회독 트래커</h3><div class="card-style"><div style="display:flex; gap:8px;"><input type="text" id="book-name" placeholder="문제집명 (예: 마더텅 국어)" style="flex:2; padding:8px; border-radius:5px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"><input type="number" id="book-total" placeholder="총 단원" style="flex:1; padding:8px; border-radius:5px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"><button id="add-book-btn" style="padding:8px 15px; background:var(--pass-color); color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">등록</button></div></div><div id="book-list-container"></div></div></div>
 <div class="modal-overlay" id="lecture-modal-overlay"><div class="modal"><button class="close-btn" style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);" onclick="closeModal('lecture-modal-overlay')">✕</button><h3>📺 인강 완강 예측 & 진도</h3><div class="card-style"><div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;"><select id="lec-category" style="padding:8px; border-radius:5px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"></select><input type="text" id="lec-name" placeholder="강의명" style="padding:8px; border-radius:5px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"></div><div style="display:flex; gap:8px;"><input type="number" id="lec-count" placeholder="총 강수" style="flex:1; padding:8px; border-radius:5px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"><button id="add-lec-btn" style="padding:8px 20px; background:var(--accent-color); color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">추가</button></div></div><div class="lec-tabs"><div class="lec-tab active" id="tab-ongoing" onclick="setLecTab('ongoing')">수강 중</div><div class="lec-tab" id="tab-completed" onclick="setLecTab('completed')">수강 완료 📦</div></div><div id="lecture-list-container"></div></div></div>
 <div class="modal-overlay" id="exam-modal-overlay"><div class="modal"><button class="close-btn" style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);" onclick="closeModal('exam-modal-overlay')">✕</button><h3>📈 모의고사 성적 관리</h3><div class="card-style"><canvas id="examChart" height="150"></canvas></div><div class="card-style"><input type="text" id="ex-title" placeholder="시험명" style="width:100%; padding:10px; margin-bottom:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"><table style="width:100%; font-size:13px; text-align:center; border-collapse: collapse; margin-bottom:10px;"><tr><th>과목</th><th>표점</th><th>백분위/등급</th></tr><tr><td>국어</td><td><input type="number" id="ex-kor-s" class="score-input"></td><td><input type="number" id="ex-kor-p" class="score-input" placeholder="%"></td></tr><tr><td>수학</td><td><input type="number" id="ex-math-s" class="score-input"></td><td><input type="number" id="ex-math-p" class="score-input" placeholder="%"></td></tr><tr style="background:rgba(74,144,226,0.05)"><td><b>영어</b></td><td>-</td><td><input type="number" id="ex-eng-g" class="score-input" placeholder="등급"></td></tr><tr><td>사문</td><td><input type="number" id="ex-in1-s" class="score-input"></td><td><input type="number" id="ex-in1-p" class="score-input" placeholder="%"></td></tr><tr><td>생윤</td><td><input type="number" id="ex-in2-s" class="score-input"></td><td><input type="number" id="ex-in2-p" class="score-input" placeholder="%"></td></tr></table><input type="text" id="ex-feedback" placeholder="🚨 핵심 패인/피드백 한 줄" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-color); color:var(--text-color);"><button id="add-exam-btn" style="width:100%; padding:12px; margin-top:10px; background:#4a90e2; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">저장</button></div><div id="exam-list-container"></div></div></div>
 <div class="modal-overlay" id="sim-timer-overlay"><div class="modal"><button style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-color);" onclick="closeModal('sim-timer-overlay')">✕</button><h3>⏲️ 수능 실전 타이머</h3><div class="exam-timer-card" id="exam-card"><div id="exam-status" style="font-size:14px; font-weight:bold;">시험 전 대기</div><div class="exam-time-big" id="exam-timer-display">00:00</div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><button class="sidebar-menu-btn" onclick="startExam(80, '국어')" style="background:#e67e22;">국어 (80분)</button><button class="sidebar-menu-btn" onclick="startExam(100, '수학')" style="background:#2980b9;">수학 (100분)</button><button class="sidebar-menu-btn" onclick="startExam(70, '영어')" style="background:#27ae60;">영어 (70분)</button><button class="sidebar-menu-btn" onclick="startExam(30, '탐구')" style="background:#8e44ad;">탐구 (30분)</button></div><button class="sidebar-menu-btn" onclick="stopExam()" style="background:#95a5a6; margin-top:10px;">타이머 종료</button></div></div>
@@ -595,7 +595,25 @@
   }
 
   function updateClock() { const now = new Date(); if($('real-time')) $('real-time').innerText = `${now.getFullYear()}. ${String(now.getMonth()+1).padStart(2,'0')}. ${String(now.getDate()).padStart(2,'0')}. ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`; }
-  function updateDDay() { const today = new Date(); today.setHours(0,0,0,0); const sDate = new Date(2026, 10, 19); const d = Math.ceil((sDate - today) / (1000 * 60 * 60 * 24)); if($('d-day')) $('d-day').innerHTML = `🔥 <b>2027 수능 D-${d}</b>`; }
+  
+  function updateDDay() { 
+    const today = new Date(); 
+    today.setHours(0,0,0,0); 
+
+    // 6평 날짜: 2026년 6월 4일 (자바스크립트에서 6월은 5로 입력)
+    const mockDate = new Date(2026, 5, 4); 
+    const mockD = Math.ceil((mockDate - today) / (1000 * 60 * 60 * 24));
+
+    // 수능 날짜: 기존 설정된 2026년 11월 19일
+    const sDate = new Date(2026, 10, 19); 
+    const sD = Math.ceil((sDate - today) / (1000 * 60 * 60 * 24)); 
+
+    // 화면에 표시
+    if($('d-day')) {
+      $('d-day').innerHTML = `🔥 <b>6평 D-${mockD} | 2027 수능 D-${sD}</b>`; 
+    }
+  }
+
   function updateTot() { const tot = (appData[currentKey]?.tasks || []).reduce((a, t) => a + (t.time || 0), 0); if($('total-display')) $('total-display').textContent = format(tot); }
 
   if($('open-calendar-modal')) $('open-calendar-modal').onclick = () => { if($('calendar-modal-overlay')) $('calendar-modal-overlay').classList.add('active'); calCurrentDate = new Date(); calSelectedDate = getToday(); renderCalendar(); renderScheduleList(); };
@@ -682,3 +700,4 @@
 </script>
 </body>
 </html>
+
