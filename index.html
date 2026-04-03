@@ -2,9 +2,20 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>수능 합격 플래너 PRO</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<link rel="apple-touch-icon" href="icon.png">
+
+<link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon.png">
+
+<meta name="theme-color" content="#ffffff">
+
+<meta name="apple-mobile-web-app-title" content="수능플래너">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
   :root {
     --bg-color: #ffffff; --text-color: #37352f; --gray-light: #f1f1ef; --gray-text: #9b9a97;
@@ -20,7 +31,7 @@
     --sidebar-bg: #222222; --dday-bg: #3d2b2b; --modal-bg: #2a2a2a;
     --grass-0: #2d333b; --quote-bg: #252525; --calendar-bg: #2a2a2a;
   }
-  body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; justify-content: center; transition: 0.3s background-color, 0.3s color; }
+  body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; justify-content: center; transition: 0.3s background-color, 0.3s color; padding-bottom: calc(constant(safe-area-inset-bottom) + 80px); padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }
   .container { width: 100%; max-width: 700px; padding: 20px 20px 80px; box-sizing: border-box; }
 
   /* 기본 UI 스타일 */
@@ -100,7 +111,7 @@
 
   /* 🛠️ 통합 FAB (플로팅 액션 버튼) 툴박스 UI */
   .fab-container { position: fixed; bottom: 25px; right: 25px; z-index: 90; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 10px; }
-  .fab-main { background: var(--accent-color); color: white; border: none; border-radius: 50%; width: 56px; height: 56px; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; }
+  .fab-main { background: var(--accent-color); color: white; border: none; border-radius: 50%; width: 56px; height: 56px; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; padding: 0; }
   .fab-main:hover { transform: scale(1.1); }
   .fab-menu { display: flex; flex-direction: column; gap: 10px; opacity: 0; visibility: hidden; transform: translateY(20px); transition: 0.3s; align-items: flex-end; }
   .fab-menu.active { opacity: 1; visibility: visible; transform: translateY(0); }
@@ -325,58 +336,15 @@
   let calCurrentDate = new Date();
   let calSelectedDate = getToday();
 
-  // ⏰ 숏 알람 (쪽잠) 변수
+  // -------------------------
+  // ⏰ 숏 알람 (쪽잠 타이머) 로직 - 강력 무한 사이렌 버전
+  // -------------------------
   let napSecondsLeft = 0;
   let napTotalSeconds = 0;
   let napTimerId = null;
   let napAudioCtx = null;
+  let isNapAlarmRinging = false; // 알람 울림 상태 플래그 추가
 
-  function format(s) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; }
-
-  function init() {
-    if(!appData[currentKey]) appData[currentKey] = { tasks: [], rating: 0, diary: "" };
-    
-    const savedColor = localStorage.getItem('studyThemeColor');
-    if(savedColor) changeThemeColor(savedColor, null);
-
-    if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
-    }
-
-    updateClock(); setInterval(updateClock, 1000);
-    updateDDay(); renderSubjects(); renderGroupedTasks(); updateTot(); renderReflection();
-    initToolbox(); renderUpcomingSchedules();
-  }
-
-  function save() { 
-      localStorage.setItem('studyPlannerData', JSON.stringify(appData)); 
-      localStorage.setItem('studyLectures', JSON.stringify(lectures)); 
-      localStorage.setItem('studyBooks', JSON.stringify(books)); 
-      localStorage.setItem('studySchedules', JSON.stringify(schedules)); 
-  }
-
-  window.changeThemeColor = (color, btnId) => {
-      document.documentElement.style.setProperty('--accent-color', color);
-      localStorage.setItem('studyThemeColor', color);
-      const buttons = document.querySelectorAll('.color-btn');
-      buttons.forEach(btn => btn.classList.remove('active'));
-      if(btnId && $(btnId)) {
-          $(btnId).classList.add('active');
-      } else if (!btnId && color) {
-          buttons.forEach(btn => { if (btn.style.background.includes(color) || btn.style.backgroundColor.includes(color)) btn.classList.add('active'); });
-      }
-      if($('weeklyChart')) drawWeekly();
-  };
-
-  function sendSystemNotification(title, bodyText) {
-      if (Notification.permission === "granted") {
-          new Notification(title, { body: bodyText, icon: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" });
-      }
-  }
-
-  // -------------------------
-  // ⏰ 숏 알람 (쪽잠 타이머) 로직
-  // -------------------------
   window.openNapModal = () => {
       $('nap-modal-overlay').classList.add('active');
       $('sidebar').classList.remove('active'); // 모달 띄우면서 사이드바 닫기
@@ -384,21 +352,16 @@
   };
 
   window.addNapTime = (mins) => {
-      if(!napAudioCtx) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext; 
-          napAudioCtx = new AudioContext(); 
-      }
+      // 이미 울리고 있었다면 끄고 새로 시작
+      if(isNapAlarmRinging) stopNapAlarm();
+
+      if(!napAudioCtx) napAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if(napAudioCtx.state === 'suspended') napAudioCtx.resume();
 
       let addedSeconds = mins * 60;
       
-      if(napTimerId === null) {
-          napTotalSeconds = addedSeconds;
-          napSecondsLeft = addedSeconds;
-      } else {
-          napTotalSeconds += addedSeconds;
-          napSecondsLeft += addedSeconds;
-      }
+      napTotalSeconds = (napTimerId ? napTotalSeconds : 0) + addedSeconds;
+      napSecondsLeft = (napTimerId ? napSecondsLeft : 0) + addedSeconds;
 
       if(napTimerId) clearInterval(napTimerId);
       updateNapUI();
@@ -410,10 +373,10 @@
               napTimerId = null;
               napSecondsLeft = 0;
               napTotalSeconds = 0;
+              isNapAlarmRinging = true; // 울림 상태로 변경
+              startStrongサイレンLoop(); // 강력 사이렌 무한 루프 시작
               updateNapUI();
-              playAlarmSound();
-              sendSystemNotification('⏰ 기상 시간입니다!', '일어나서 다시 달려볼까요? 🔥');
-              alert(`⏰ [숏 알람] 시간이 다 되었습니다! 일어나서 다시 달려볼까요? 🔥`);
+              sendSystemNotification('⏰ 기상 시간입니다!', '일어나서 다시 달려볼까요? [중지하기]를 눌러 알람을 끄세요! 🔥');
           } else {
               updateNapUI();
           }
@@ -425,6 +388,7 @@
       napTimerId = null;
       napSecondsLeft = 0;
       napTotalSeconds = 0;
+      isNapAlarmRinging = false; // 무한 루프 중단
       updateNapUI();
   };
 
@@ -432,37 +396,51 @@
       const textEl = $('nap-status-text');
       const progEl = $('nap-progress-bar');
       
-      if(napSecondsLeft <= 0) {
+      if(isNapAlarmRinging) {
+          textEl.innerText = "⏰ 일어나세요! [중지하기]를 누를 때까지 울립니다!";
+          textEl.style.color = "red";
+          progEl.style.width = '100%';
+          progEl.style.background = 'red';
+      } else if(napSecondsLeft <= 0) {
           textEl.innerText = "진행중인 알람이 없어요";
+          textEl.style.color = "var(--text-color)";
           progEl.style.width = '0%';
+          progEl.style.background = 'var(--accent-color)';
       } else {
           const m = Math.floor(napSecondsLeft / 60);
           const s = napSecondsLeft % 60;
           textEl.innerText = `${m}분 ${String(s).padStart(2,'0')}초 뒤에 알람이 울려요`;
+          textEl.style.color = "var(--text-color)";
           const percentage = (napSecondsLeft / napTotalSeconds) * 100;
           progEl.style.width = `${percentage}%`;
+          progEl.style.background = 'var(--accent-color)';
       }
   }
 
-  function playAlarmSound() {
-      if(!napAudioCtx) return;
-      if(napAudioCtx.state === 'suspended') napAudioCtx.resume();
+  // 중지할 때까지 0.5초 주기로 고음 사이렌 소리를 반복하는 재귀 함수
+  function startStrongサイ렌Loop() {
+      if(!isNapAlarmRinging) return; 
+
+      const now = napAudioCtx.currentTime;
+      const osc = napAudioCtx.createOscillator();
+      const gain = napAudioCtx.createGain();
+
+      osc.type = 'sawtooth'; // 날카로운 톱니파 사용
+      // 사이렌 효과: 주파수를 1000Hz에서 1500Hz로 빠르게 올림
+      osc.frequency.setValueAtTime(1000, now);
+      osc.frequency.exponentialRampToValueAtTime(1500, now + 0.2);
       
-      for(let i=0; i<6; i++) {
-          const osc = napAudioCtx.createOscillator();
-          const gain = napAudioCtx.createGain();
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(800, napAudioCtx.currentTime + (i*0.5));
-          
-          gain.gain.setValueAtTime(0, napAudioCtx.currentTime + (i*0.5));
-          gain.gain.linearRampToValueAtTime(0.5, napAudioCtx.currentTime + (i*0.5) + 0.1);
-          gain.gain.linearRampToValueAtTime(0, napAudioCtx.currentTime + (i*0.5) + 0.4);
-          
-          osc.connect(gain);
-          gain.connect(napAudioCtx.destination);
-          osc.start(napAudioCtx.currentTime + (i*0.5));
-          osc.stop(napAudioCtx.currentTime + (i*0.5) + 0.4);
-      }
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.8, now + 0.05); // 볼륨 대폭 상향
+      gain.gain.linearRampToValueAtTime(0, now + 0.45); // 소리 지속 시간
+      
+      osc.connect(gain);
+      gain.connect(napAudioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+
+      // 0.5초 후에 다시 실행 (무한 반복)
+      setTimeout(startStrongサイ렌Loop, 500);
   }
   // -------------------------
 
@@ -639,7 +617,7 @@
       }
   }
   function renderScheduleList() {
-      $('selected-date-title').innerText = `${calSelectedDate} 일정`; const container = $('schedule-list-container'); container.innerHTML = '';
+      $('selected-date-title').innerText = `${calSelectedDate} 일 정`; const container = $('schedule-list-container'); container.innerHTML = '';
       const daySchedules = schedules[calSelectedDate] || [];
       if(daySchedules.length === 0) { container.innerHTML = `<div style="color:var(--gray-text); text-align:center; padding:10px 0; font-size:13px;">등록된 일정이 없습니다.</div>`; }
       else { daySchedules.forEach((sch, idx) => { const div = document.createElement('div'); div.className = 'schedule-item'; div.innerHTML = `<span>📍 ${sch}</span><button class="icon-btn" onclick="deleteSchedule(${idx})" style="margin:0;">✕</button>`; container.appendChild(div); }); }
@@ -668,7 +646,7 @@
 
   if($('open-lecture-modal')) $('open-lecture-modal').onclick = () => { if($('lecture-modal-overlay')) $('lecture-modal-overlay').classList.add('active'); renderLectures(); };
   if($('add-lec-btn')) { $('add-lec-btn').onclick = () => { const cat = $('lec-category')?.value, name = $('lec-name')?.value, total = parseInt($('lec-count')?.value); if(name && total) { lectures.push({category: cat, name, total, done:0, startDate: getToday()}); $('lec-name').value=''; $('lec-count').value=''; save(); renderLectures(); } }; }
-  function renderLectures() { const cont = $('lecture-list-container'); if(!cont) return; cont.innerHTML = ''; const filteredLecs = lectures.filter(l => currentLecTab === 'ongoing' ? (l.done < l.total) : (l.done >= l.total)); categories.forEach(cat => { const catLecs = filteredLecs.filter(l => l.category === cat); if(catLecs.length > 0) { const header = document.createElement('div'); header.style = "font-size:13px; font-weight:bold; color:var(--text-color); margin: 15px 0 8px; border-bottom:1px solid var(--border-color); padding-bottom:5px;"; header.innerText = `🏷️ ${cat}`; cont.appendChild(header); catLecs.forEach((l) => { const originalIdx = lectures.indexOf(l); const per = Math.round((l.done / l.total) * 100) || 0; if(!l.startDate) l.startDate = getToday(); let start = new Date(l.startDate); let now = new Date(getToday()); let diffDays = Math.max(1, (now - start) / (1000 * 60 * 60 * 24)); let speed = l.done / diffDays; let predictHtml = `<span style="font-size:11px; color:var(--gray-text); margin-left:8px;">[예측 불가]</span>`; if(l.done >= l.total) { predictHtml = `<span style="font-size:11px; color:#27ae60; font-weight:bold; margin-left:8px;">🎉 완강!</span>`; } else if (speed > 0) { let daysLeft = Math.ceil((l.total - l.done) / speed); let expDate = new Date(now.getTime() + daysLeft * 24 * 60 * 60 * 1000); predictHtml = `<span style="font-size:11px; color:var(--accent-color); font-weight:bold; margin-left:8px;">🎯 예상 완강: ${expDate.getMonth()+1}/${expDate.getDate()}</span>`; } const div = document.createElement('div'); div.className = 'card-style'; div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:8px; align-items:center;"><b style="font-size:15px;">${l.name} ${predictHtml}</b><span style="font-size:13px; font-weight:bold; color:var(--gray-text);">${l.done}/${l.total}강 (${per}%)</span></div><div style="background:var(--border-color);height:8px;border-radius:4px;overflow:hidden; margin-bottom:12px;"><div style="background:var(--accent-color);width:${per}%;height:100%; transition: 0.3s;"></div></div><div style="display:flex; gap:8px;"><button style="padding:5px 10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; color:var(--text-color);" onclick="updateLec(${originalIdx}, 1)">+1강</button><button style="padding:5px 10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; color:var(--text-color);" onclick="updateLec(${originalIdx}, -1)">-1강</button><button style="margin-left:auto; padding:5px 10px; color:red; border:none; background:none; cursor:pointer; font-weight:bold;" onclick="delLec(${originalIdx})">삭제</button></div>`; cont.appendChild(div); }); } }); if(filteredLecs.length === 0) cont.innerHTML = `<div style="text-align:center; padding:40px; color:var(--gray-text);">${currentLecTab === 'ongoing' ? '수강 중인 강의 없음' : '완료된 강의 없음'}</div>`; }
+  function renderLectures() { const cont = $('lecture-list-container'); if(!cont) return; cont.innerHTML = ''; const filteredLecs = lectures.filter(l => currentLecTab === 'ongoing' ? (l.done < l.total) : (l.done >= l.total)); categories.forEach(cat => { const catLecs = filteredLecs.filter(l => l.category === cat); if(catLecs.length > 0) { const header = document.createElement('div'); header.style = "font-size:13px; font-weight:bold; color:var(--text-color); margin: 15px 0 8px; border-bottom:1px solid var(--border-color); padding-bottom:5px;"; header.innerText = `🏷️ ${cat}`; cont.appendChild(header); catLecs.forEach((l) => { const originalIdx = lectures.indexOf(l); const per = Math.round((l.done / l.total) * 100) || 0; if(!l.startDate) l.startDate = getToday(); let start = new Date(l.startDate); let now = new Date(getToday()); let diffDays = Math.max(1, (now - start) / (1000 * 60 * 60 * 24)); let speed = l.done / diffDays; let predictHtml = `<span style="font-size:11px; color:var(--gray-text); margin-left:8px;">[예측 불가]</span>`; if(l.done >= l.total) { predictHtml = `<span style="font-size:11px; color:#27ae60; font-weight:bold; margin-left:8px;">🎉 완강!</span>`; } else if (speed > 0) { let daysLeft = Math.ceil((l.total - l.done) / speed); let expDate = new Date(now.getTime() + daysLeft * 24 * 60 * 60 * 1000); predictHtml = `<span style="font-size:11px; color:var(--accent-color); font-weight:bold; margin-left:8px;">🎯 예상 완강: ${expDate.getMonth()+1}/${expDate.getDate()}</span>`; } const div = document.createElement('div'); div.className = 'card-style'; div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:8px; align-items:center;"><b style="font-size:15px;">${l.name} ${predictHtml}</b><span style="font-size:13px; font-weight:bold; color:var(--gray-text);">${l.done}/${l.total}강 (${per}%)</span></div><div style="background:var(--border-color);height:8px;border-radius:4px;overflow:hidden; margin-bottom:12px;"><div style="background:var(--accent-color);width:${per}%;height:100%; transition: 0.3s;"></div></div><div style="display:flex; gap:8px;"><button style="padding:5px 10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; color:var(--text-color);" onclick="updateLec(${originalIdx}, 1)">+1강</button><button style="padding:5px 10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; color:var(--text-color);" onclick="updateLec(${originalIdx}, -1)">-1강</button><button style="margin-left:auto; padding:5px 10px; color:red; border:none; background:none; cursor:pointer; font-weight:bold;" onclick="delLec(${originalIdx})">삭제</button></div>`; cont.appendChild(div); }); } }); if(filteredLecs.length === 0) cont.innerHTML = `<div style="text-align:center; padding:40px; color:var(--gray-text);">“${currentLecTab === 'ongoing' ? '수강 중인 강의 없음' : '완료된 강의 없음'}”</div>`; }
   window.updateLec = (i, v) => { lectures[i].done = Math.max(0, Math.min(lectures[i].total, lectures[i].done + v)); save(); renderLectures(); }; window.delLec = (i) => { if(confirm('인강을 삭제할까요?')) { lectures.splice(i, 1); save(); renderLectures(); } }; window.setLecTab = (tab) => { currentLecTab = tab; $('tab-ongoing').classList.toggle('active', tab==='ongoing'); $('tab-completed').classList.toggle('active', tab==='completed'); renderLectures(); };
 
   function renderSubjects() { const container = $('subject-btn-container'); if(!container) return; container.innerHTML = ''; for(let i=0; i<5; i++) { const btn = document.createElement('button'); btn.className = 'sub-btn'; btn.innerText = categories[i]; btn.onclick = () => { const input = $('task-input'); input.value = categories[i] + ' ' + input.value; input.focus(); }; container.appendChild(btn); } const select = $('lec-category'); if(select) { select.innerHTML = ''; categories.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.innerText = c; select.appendChild(opt); }); } }
