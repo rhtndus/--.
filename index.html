@@ -343,7 +343,50 @@
   let napTotalSeconds = 0;
   let napTimerId = null;
   let napAudioCtx = null;
-  let isNapAlarmRinging = false; // 알람 울림 상태 플래그 추가
+  let isNapAlarmRinging = false; // 알람 울림 상태 플래그
+
+  function format(s) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; }
+
+  function init() {
+    if(!appData[currentKey]) appData[currentKey] = { tasks: [], rating: 0, diary: "" };
+    
+    const savedColor = localStorage.getItem('studyThemeColor');
+    if(savedColor) changeThemeColor(savedColor, null);
+
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+
+    updateClock(); setInterval(updateClock, 1000);
+    updateDDay(); renderSubjects(); renderGroupedTasks(); updateTot(); renderReflection();
+    initToolbox(); renderUpcomingSchedules();
+  }
+
+  function save() { 
+      localStorage.setItem('studyPlannerData', JSON.stringify(appData)); 
+      localStorage.setItem('studyLectures', JSON.stringify(lectures)); 
+      localStorage.setItem('studyBooks', JSON.stringify(books)); 
+      localStorage.setItem('studySchedules', JSON.stringify(schedules)); 
+  }
+
+  window.changeThemeColor = (color, btnId) => {
+      document.documentElement.style.setProperty('--accent-color', color);
+      localStorage.setItem('studyThemeColor', color);
+      const buttons = document.querySelectorAll('.color-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      if(btnId && $(btnId)) {
+          $(btnId).classList.add('active');
+      } else if (!btnId && color) {
+          buttons.forEach(btn => { if (btn.style.background.includes(color) || btn.style.backgroundColor.includes(color)) btn.classList.add('active'); });
+      }
+      if($('weeklyChart')) drawWeekly();
+  };
+
+  function sendSystemNotification(title, bodyText) {
+      if (Notification.permission === "granted") {
+          new Notification(title, { body: bodyText, icon: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" });
+      }
+  }
 
   window.openNapModal = () => {
       $('nap-modal-overlay').classList.add('active');
@@ -388,7 +431,7 @@
       napTimerId = null;
       napSecondsLeft = 0;
       napTotalSeconds = 0;
-      isNapAlarmRinging = false; // 무한 루프 중단
+      isNapAlarmRinging = false; // 무한 루프 중단 플래그
       updateNapUI();
   };
 
@@ -431,7 +474,7 @@
       osc.frequency.exponentialRampToValueAtTime(1500, now + 0.2);
       
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.8, now + 0.05); // 볼륨 대폭 상향
+      gain.gain.linearRampToValueAtTime(0.8, now + 0.05); // 볼륨 크게
       gain.gain.linearRampToValueAtTime(0, now + 0.45); // 소리 지속 시간
       
       osc.connect(gain);
@@ -577,16 +620,10 @@
   function updateDDay() { 
     const today = new Date(); 
     today.setHours(0,0,0,0); 
-
-    // 6평 날짜: 2026년 6월 4일 (자바스크립트에서 6월은 5로 입력)
     const mockDate = new Date(2026, 5, 4); 
     const mockD = Math.ceil((mockDate - today) / (1000 * 60 * 60 * 24));
-
-    // 수능 날짜: 기존 설정된 2026년 11월 19일
     const sDate = new Date(2026, 10, 19); 
     const sD = Math.ceil((sDate - today) / (1000 * 60 * 60 * 24)); 
-
-    // 화면에 표시
     if($('d-day')) {
       $('d-day').innerHTML = `🔥 <b>6평 D-${mockD} | 2027 수능 D-${sD}</b>`; 
     }
@@ -617,7 +654,7 @@
       }
   }
   function renderScheduleList() {
-      $('selected-date-title').innerText = `${calSelectedDate} 일 정`; const container = $('schedule-list-container'); container.innerHTML = '';
+      $('selected-date-title').innerText = `${calSelectedDate} 일정`; const container = $('schedule-list-container'); container.innerHTML = '';
       const daySchedules = schedules[calSelectedDate] || [];
       if(daySchedules.length === 0) { container.innerHTML = `<div style="color:var(--gray-text); text-align:center; padding:10px 0; font-size:13px;">등록된 일정이 없습니다.</div>`; }
       else { daySchedules.forEach((sch, idx) => { const div = document.createElement('div'); div.className = 'schedule-item'; div.innerHTML = `<span>📍 ${sch}</span><button class="icon-btn" onclick="deleteSchedule(${idx})" style="margin:0;">✕</button>`; container.appendChild(div); }); }
@@ -646,7 +683,7 @@
 
   if($('open-lecture-modal')) $('open-lecture-modal').onclick = () => { if($('lecture-modal-overlay')) $('lecture-modal-overlay').classList.add('active'); renderLectures(); };
   if($('add-lec-btn')) { $('add-lec-btn').onclick = () => { const cat = $('lec-category')?.value, name = $('lec-name')?.value, total = parseInt($('lec-count')?.value); if(name && total) { lectures.push({category: cat, name, total, done:0, startDate: getToday()}); $('lec-name').value=''; $('lec-count').value=''; save(); renderLectures(); } }; }
-  function renderLectures() { const cont = $('lecture-list-container'); if(!cont) return; cont.innerHTML = ''; const filteredLecs = lectures.filter(l => currentLecTab === 'ongoing' ? (l.done < l.total) : (l.done >= l.total)); categories.forEach(cat => { const catLecs = filteredLecs.filter(l => l.category === cat); if(catLecs.length > 0) { const header = document.createElement('div'); header.style = "font-size:13px; font-weight:bold; color:var(--text-color); margin: 15px 0 8px; border-bottom:1px solid var(--border-color); padding-bottom:5px;"; header.innerText = `🏷️ ${cat}`; cont.appendChild(header); catLecs.forEach((l) => { const originalIdx = lectures.indexOf(l); const per = Math.round((l.done / l.total) * 100) || 0; if(!l.startDate) l.startDate = getToday(); let start = new Date(l.startDate); let now = new Date(getToday()); let diffDays = Math.max(1, (now - start) / (1000 * 60 * 60 * 24)); let speed = l.done / diffDays; let predictHtml = `<span style="font-size:11px; color:var(--gray-text); margin-left:8px;">[예측 불가]</span>`; if(l.done >= l.total) { predictHtml = `<span style="font-size:11px; color:#27ae60; font-weight:bold; margin-left:8px;">🎉 완강!</span>`; } else if (speed > 0) { let daysLeft = Math.ceil((l.total - l.done) / speed); let expDate = new Date(now.getTime() + daysLeft * 24 * 60 * 60 * 1000); predictHtml = `<span style="font-size:11px; color:var(--accent-color); font-weight:bold; margin-left:8px;">🎯 예상 완강: ${expDate.getMonth()+1}/${expDate.getDate()}</span>`; } const div = document.createElement('div'); div.className = 'card-style'; div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:8px; align-items:center;"><b style="font-size:15px;">${l.name} ${predictHtml}</b><span style="font-size:13px; font-weight:bold; color:var(--gray-text);">${l.done}/${l.total}강 (${per}%)</span></div><div style="background:var(--border-color);height:8px;border-radius:4px;overflow:hidden; margin-bottom:12px;"><div style="background:var(--accent-color);width:${per}%;height:100%; transition: 0.3s;"></div></div><div style="display:flex; gap:8px;"><button style="padding:5px 10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; color:var(--text-color);" onclick="updateLec(${originalIdx}, 1)">+1강</button><button style="padding:5px 10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; color:var(--text-color);" onclick="updateLec(${originalIdx}, -1)">-1강</button><button style="margin-left:auto; padding:5px 10px; color:red; border:none; background:none; cursor:pointer; font-weight:bold;" onclick="delLec(${originalIdx})">삭제</button></div>`; cont.appendChild(div); }); } }); if(filteredLecs.length === 0) cont.innerHTML = `<div style="text-align:center; padding:40px; color:var(--gray-text);">“${currentLecTab === 'ongoing' ? '수강 중인 강의 없음' : '완료된 강의 없음'}”</div>`; }
+  function renderLectures() { const cont = $('lecture-list-container'); if(!cont) return; cont.innerHTML = ''; const filteredLecs = lectures.filter(l => currentLecTab === 'ongoing' ? (l.done < l.total) : (l.done >= l.total)); categories.forEach(cat => { const catLecs = filteredLecs.filter(l => l.category === cat); if(catLecs.length > 0) { const header = document.createElement('div'); header.style = "font-size:13px; font-weight:bold; color:var(--text-color); margin: 15px 0 8px; border-bottom:1px solid var(--border-color); padding-bottom:5px;"; header.innerText = `🏷️ ${cat}`; cont.appendChild(header); catLecs.forEach((l) => { const originalIdx = lectures.indexOf(l); const per = Math.round((l.done / l.total) * 100) || 0; if(!l.startDate) l.startDate = getToday(); let start = new Date(l.startDate); let now = new Date(getToday()); let diffDays = Math.max(1, (now - start) / (1000 * 60 * 60 * 24)); let speed = l.done / diffDays; let predictHtml = `<span style="font-size:11px; color:var(--gray-text); margin-left:8px;">[예측 불가]</span>`; if(l.done >= l.total) { predictHtml = `<span style="font-size:11px; color:#27ae60; font-weight:bold; margin-left:8px;">🎉 완강!</span>`; } else if (speed > 0) { let daysLeft = Math.ceil((l.total - l.done) / speed); let expDate = new Date(now.getTime() + daysLeft * 24 * 60 * 60 * 1000); predictHtml = `<span style="font-size:11px; color:var(--accent-color); font-weight:bold; margin-left:8px;">🎯 예상 완강: ${expDate.getMonth()+1}/${expDate.getDate()}</span>`; } const div = document.createElement('div'); div.className = 'card-style'; div.innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:8px; align-items:center;"><b style="font-size:15px;">${l.name} ${predictHtml}</b><span style="font-size:13px; font-weight:bold; color:var(--gray-text);">${l.done}/${l.total}강 (${per}%)</span></div><div style="background:var(--border-color);height:8px;border-radius:4px;overflow:hidden; margin-bottom:12px;"><div style="background:var(--accent-color);width:${per}%;height:100%; transition: 0.3s;"></div></div><div style="display:flex; gap:8px;"><button style="padding:5px 10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; color:var(--text-color);" onclick="updateLec(${originalIdx}, 1)">+1강</button><button style="padding:5px 10px; background:var(--bg-color); border:1px solid var(--border-color); border-radius:5px; cursor:pointer; color:var(--text-color);" onclick="updateLec(${originalIdx}, -1)">-1강</button><button style="margin-left:auto; padding:5px 10px; color:red; border:none; background:none; cursor:pointer; font-weight:bold;" onclick="delLec(${originalIdx})">삭제</button></div>`; cont.appendChild(div); }); } }); if(filteredLecs.length === 0) cont.innerHTML = `<div style="text-align:center; padding:40px; color:var(--gray-text);">${currentLecTab === 'ongoing' ? '수강 중인 강의 없음' : '완료된 강의 없음'}</div>`; }
   window.updateLec = (i, v) => { lectures[i].done = Math.max(0, Math.min(lectures[i].total, lectures[i].done + v)); save(); renderLectures(); }; window.delLec = (i) => { if(confirm('인강을 삭제할까요?')) { lectures.splice(i, 1); save(); renderLectures(); } }; window.setLecTab = (tab) => { currentLecTab = tab; $('tab-ongoing').classList.toggle('active', tab==='ongoing'); $('tab-completed').classList.toggle('active', tab==='completed'); renderLectures(); };
 
   function renderSubjects() { const container = $('subject-btn-container'); if(!container) return; container.innerHTML = ''; for(let i=0; i<5; i++) { const btn = document.createElement('button'); btn.className = 'sub-btn'; btn.innerText = categories[i]; btn.onclick = () => { const input = $('task-input'); input.value = categories[i] + ' ' + input.value; input.focus(); }; container.appendChild(btn); } const select = $('lec-category'); if(select) { select.innerHTML = ''; categories.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.innerText = c; select.appendChild(opt); }); } }
